@@ -1,0 +1,1018 @@
+{% extends "base.html" %}
+
+{% block title %}Create {{ template_info.name }} - Document Generator{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+  <a href="{{ url_for('home') }}" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; color: var(--primary); background: #eff6ff; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; transition: all 0.2s; border: 1px solid #dbeafe; line-height: 1.2; white-space: nowrap;" onmouseover="this.style.background='#dbeafe'; this.style.transform='translateX(-2px)'" onmouseout="this.style.background='#eff6ff'; this.style.transform='translateX(0)'" title="Back to Home">
+    <span style="font-size: 16px; line-height: 1;">←</span> <span>Back</span>
+  </a>
+  <h2 class="page-title" style="margin: 0;">Create {{ template_info.name }}</h2>
+</div>
+
+<style>
+  :root {
+    --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --bg:#fafafa; --card:#ffffff; --primary:#2563eb;
+    --danger:#dc2626; --radius:12px;
+  }
+  /* Page & container */
+  .container-narrow{max-width:1080px;margin:0 auto;padding:12px 16px 96px}
+  .page-title{margin:12px 0 16px;font-weight:700}
+
+  /* Sections */
+  .section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin:16px 0;padding:16px}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .section-title{font-size:18px;font-weight:600}
+  .section-subtle{color:var(--muted);font-size:13px}
+
+  /* Grid */
+  .grid{display:grid;gap:16px}
+  @media (min-width: 992px){ .grid-2{grid-template-columns:1.1fr 1.9fr} }
+
+  /* Inputs */
+  * { box-sizing: border-box; }
+  label{font-size:13px;color:var(--muted);margin-bottom:4px;display:block}
+  input[type="text"], textarea{
+    box-sizing:border-box;
+    width:100%;
+  }
+  input[type="text"]{padding:10px 12px;border:1px solid var(--line);border-radius:8px;outline:none}
+  input[type="text"]:focus{border-color:#c7d2fe;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+  textarea{padding:10px 12px;border:1px solid var(--line);border-radius:8px;outline:none;resize:vertical}
+
+  /* Add buttons */
+  .add-row{display:flex;justify-content:flex-end;margin-top:12px}
+  .btn-add{background:var(--primary);color:#fff;border:none;padding:8px 12px;border-radius:10px;cursor:pointer}
+  .btn-add:hover{filter:brightness(0.97)}
+
+  /* Empty state */
+  .empty{text-align:center;color:var(--muted);padding:20px;border:1px dashed var(--line);border-radius:10px;background:#fcfcfd}
+
+  /* Entry cards (accordion) */
+  .entry{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden;margin-top:10px}
+  .entry > summary{list-style:none;cursor:pointer}
+  .entry > summary::-webkit-details-marker{display:none}
+  .entry-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f8fafc}
+  .entry-title{font-weight:600}
+  .entry-body{padding:12px 14px}
+  .entry-row{display:grid;gap:12px;align-items:start}
+  @media (min-width: 768px){ .entry-row{grid-template-columns:1fr 2fr} }
+  .entry-row > div { min-width: 0; } /* Prevent grid overflow */
+  .entry-actions{display:flex;gap:8px}
+  .btn-icon{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 8px;cursor:pointer}
+  .btn-icon:hover{background:#f3f4f6}
+  .btn-danger{border-color:#fecaca;color:#b91c1c}
+  .editor-preview{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:6px}
+
+  /* Quill (shared toolbar) */
+  .toolbar-wrapper{position:sticky;top:60px;z-index:10;background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .ql-toolbar.ql-snow{border:none;border-bottom:1px solid var(--line);border-radius:12px 12px 0 0}
+  /* Base: every Quill editor gets a full border */
+  .ql-container.ql-snow {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  /* Only the big editors that have a toolbar directly above lose the top border */
+  .ql-toolbar.ql-snow + .ql-container.ql-snow {
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+  }
+  /* Make compact editors inside Petitioners/Respondents stable and visible */
+  .entry .ql-editor { 
+    min-height: 110px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .entry .ql-container.ql-snow { 
+    border: 1px solid var(--line); 
+    border-radius: 10px;
+  }
+  .editor-tall{min-height:240px}
+  .editor-compact{min-height:110px}
+  /* Sticky submit bar */
+  .actionbar{position:fixed;left:0;right:0;bottom:0;background:#ffffffd9;backdrop-filter:blur(6px);
+             border-top:1px solid var(--line);padding:10px 16px;display:flex;justify-content:center;gap:12px;align-items:center}
+  .btn-primary{background:var(--primary);border:none;color:#fff;border-radius:12px;padding:12px 18px;font-size:16px;cursor:pointer}
+  .btn-primary:hover{filter:brightness(0.96)}
+  .msg{color:#059669;font-style:italic}
+</style>
+
+<div class="container-narrow">
+  <form method="post" action="{{ url_for('generate') }}" onsubmit="return handleSubmit(event)">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="doc_type" value="{{ doc_type }}">
+
+    <!-- Details -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Details</div>
+      </div>
+      <div class="grid">
+        <div>
+          <label>Date</label>
+          <input type="text" name="date" id="datePicker" required>
+        </div>
+        <div>
+          <label>District</label>
+          <input type="text" name="district" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- Petitioners -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Petitioners <span id="petitioner_count" class="section-subtle">(0)</span></div>
+        <div class="section-subtle">Paste all petitioners from Word (numbered 01., 02., etc. or single entry without number)</div>
+      </div>
+      
+      <!-- Bulk Paste Area -->
+      <div id="petitioner-paste-section">
+        <label>Paste petitioners here:</label>
+        <textarea id="petitioner-paste" rows="15" placeholder="For multiple:&#10;01. Name&#10;    Address line 1&#10;    Address line 2&#10;&#10;02. Name&#10;    ...&#10;&#10;For single:&#10;Name&#10;Address line 1&#10;Address line 2" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button type="button" class="btn-primary" onclick="parsePetitioners()">Preview</button>
+          <button type="button" class="btn-icon" onclick="clearPetitioners()">Clear</button>
+        </div>
+      </div>
+
+      <!-- Preview/Edit Section -->
+      <div id="petitioner-preview-section" style="display:none;margin-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="section-title">Preview (Edit before adding):</div>
+          <button type="button" class="btn-icon" onclick="cancelPetitionerPreview()">Cancel</button>
+      </div>
+        <div id="petitioner-preview-list"></div>
+        <div style="margin-top:16px;display:flex;gap:8px;">
+          <button type="button" class="btn-primary" onclick="addAllPetitioners()">Add All Petitioners</button>
+          <button type="button" class="btn-icon" onclick="cancelPetitionerPreview()">Cancel</button>
+      </div>
+      </div>
+
+      <!-- Added Petitioners Display -->
+      <div id="petitioners-added-section" style="display:none;margin-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="section-title">Added Petitioners <span id="petitioner_count_display" class="section-subtle">(0)</span></div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn-icon" onclick="showPetitionerPaste()">+ Add More</button>
+            <button type="button" class="btn-icon btn-danger" onclick="clearAllPetitioners()">Clear All</button>
+          </div>
+        </div>
+        <div id="petitioners-added-list" style="max-height:400px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- Hidden inputs for parsed data -->
+      <div id="petitioners-wrapper" style="display:none;"></div>
+      <div id="petitioners-empty" class="empty" style="display:none;">No petitioners yet.</div>
+    </div>
+
+    <!-- Respondents -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Respondents <span id="respondent_count" class="section-subtle">(0)</span></div>
+        <div class="section-subtle">Paste all respondents from Word (numbered 01., 02., etc. or single entry without number)</div>
+      </div>
+      
+      <!-- Bulk Paste Area -->
+      <div id="respondent-paste-section">
+        <label>Paste respondents here:</label>
+        <textarea id="respondent-paste" rows="15" placeholder="For multiple:&#10;01. Name&#10;    Address line 1&#10;    Address line 2&#10;&#10;02. Name&#10;    ...&#10;&#10;For single:&#10;Name&#10;Address line 1&#10;Address line 2" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button type="button" class="btn-primary" onclick="parseRespondents()">Preview</button>
+          <button type="button" class="btn-icon" onclick="clearRespondents()">Clear</button>
+        </div>
+      </div>
+
+      <!-- Preview/Edit Section -->
+      <div id="respondent-preview-section" style="display:none;margin-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="section-title">Preview (Edit before adding):</div>
+          <button type="button" class="btn-icon" onclick="cancelRespondentPreview()">Cancel</button>
+      </div>
+        <div id="respondent-preview-list"></div>
+        <div style="margin-top:16px;display:flex;gap:8px;">
+          <button type="button" class="btn-primary" onclick="addAllRespondents()">Add All Respondents</button>
+          <button type="button" class="btn-icon" onclick="cancelRespondentPreview()">Cancel</button>
+      </div>
+      </div>
+
+      <!-- Added Respondents Display -->
+      <div id="respondents-added-section" style="display:none;margin-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="section-title">Added Respondents <span id="respondent_count_display" class="section-subtle">(0)</span></div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn-icon" onclick="showRespondentPaste()">+ Add More</button>
+            <button type="button" class="btn-icon btn-danger" onclick="clearAllRespondents()">Clear All</button>
+          </div>
+        </div>
+        <div id="respondents-added-list" style="max-height:400px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- Hidden inputs for parsed data -->
+      <div id="respondents-wrapper" style="display:none;"></div>
+      <div id="respondents-empty" class="empty" style="display:none;">No respondents yet.</div>
+    </div>
+
+    <!-- Main Prayer (its own section) -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Main Prayer</div>
+        <div class="section-subtle">Use the toolbar to format</div>
+      </div>
+
+      <!-- toolbar for main -->
+      <div id="toolbar-main" class="ql-toolbar ql-snow">
+        <span class="ql-formats">
+          <select class="ql-font">
+            <option value="arial" selected>Arial</option>
+            <option value="times-new-roman">Times New Roman</option>
+            <option value="calibri">Calibri</option>
+            <option value="sans-serif">Sans Serif</option>
+            <option value="serif">Serif</option>
+            <option value="monospace">Monospace</option>
+          </select>
+          <select class="ql-size">
+            <option value="12px">12px</option>
+            <option value="14px" selected>14px</option>
+            <option value="16px">16px</option>
+            <option value="18px">18px</option>
+          </select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-bold"></button>
+          <button class="ql-italic"></button>
+          <button class="ql-underline"></button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-list" value="ordered"></button>
+          <button class="ql-list" value="bullet"></button>
+        </span>
+        <span class="ql-formats">
+          <select class="ql-align"></select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-clean"></button>
+        </span>
+      </div>
+
+      <input type="hidden" name="main_prayer" id="main_prayer">
+      <div id="main_prayer_editor" class="editor-tall"></div>
+    </div>
+
+    <!-- Interim Prayer (separate section) -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Interim Prayer</div>
+        <div class="section-subtle">Use the toolbar to format</div>
+      </div>
+
+      <!-- toolbar for interim -->
+      <div id="toolbar-interim" class="ql-toolbar ql-snow">
+        <span class="ql-formats">
+          <select class="ql-font">
+            <option value="arial" selected>Arial</option>
+            <option value="times-new-roman">Times New Roman</option>
+            <option value="calibri">Calibri</option>
+            <option value="sans-serif">Sans Serif</option>
+            <option value="serif">Serif</option>
+            <option value="monospace">Monospace</option>
+          </select>
+          <select class="ql-size">
+            <option value="12px">12px</option>
+            <option value="14px" selected>14px</option>
+            <option value="16px">16px</option>
+            <option value="18px">18px</option>
+          </select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-bold"></button>
+          <button class="ql-italic"></button>
+          <button class="ql-underline"></button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-list" value="ordered"></button>
+          <button class="ql-list" value="bullet"></button>
+        </span>
+        <span class="ql-formats">
+          <select class="ql-align"></select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-clean"></button>
+        </span>
+      </div>
+
+      <input type="hidden" name="interim_prayer" id="interim_prayer">
+      <div id="interim_prayer_editor" class="editor-tall"></div>
+    </div>
+
+    <!-- Hidden toolbar for compact editors (required for Quill to work) -->
+    <div id="toolbar-compact" class="ql-toolbar ql-snow" style="display: none;">
+      <span class="ql-formats">
+        <button class="ql-bold"></button>
+        <button class="ql-italic"></button>
+        <button class="ql-underline"></button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-list" value="ordered"></button>
+        <button class="ql-list" value="bullet"></button>
+      </span>
+    </div>
+
+    <!-- sticky submit -->
+    <div class="actionbar">
+      <button type="submit" class="btn-primary">🚀 Generate Document</button>
+      <span id="submit-msg" class="msg"></span>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  // ===== Quill setup =====
+  const Font = Quill.import('formats/font');
+  Font.whitelist = ['arial','calibri','times-new-roman','sans-serif','serif','monospace'];
+  Quill.register(Font, true);
+
+  const Size = Quill.import('attributors/style/size');
+  Size.whitelist = ['12px','14px','16px','18px'];
+  Quill.register(Size, true);
+
+  const editors = {};
+
+  function makeEditor(selector, toolbarId, compact=false){
+    const q = new Quill(selector, {
+      theme: 'snow',
+      modules: { toolbar: '#' + toolbarId },
+      placeholder: 'Type here…'
+    });
+    q.format('size','14px');
+    q.root.classList.add(compact ? 'editor-compact' : 'editor-tall');
+    return q;
+  }
+
+  // Main / Interim editors with their own toolbars
+  editors['main_prayer']    = makeEditor('#main_prayer_editor', 'toolbar-main', false);
+  editors['interim_prayer'] = makeEditor('#interim_prayer_editor', 'toolbar-interim', false);
+
+  // Petitioners/Respondents
+  function updateCounter(kind){
+    const wrapper = document.getElementById(`${kind}-wrapper`);
+    const empty = document.getElementById(`${kind}-empty`);
+    const count = wrapper.querySelectorAll('details.entry').length;
+    document.getElementById(`${kind.slice(0,-1)}_count`).textContent = `(${count})`;
+    empty.style.display = count === 0 ? 'block' : 'none';
+  }
+
+  function toggleOpen(id){ const d=document.getElementById(id); d.open=!d.open; }
+
+  function attachCompactEditor(addrId){
+    // Wait for DOM to be ready
+    setTimeout(() => {
+      const element = document.getElementById(addrId);
+      if (!element) {
+        console.error('Element not found:', addrId);
+        return;
+      }
+      
+      const q = new Quill(`#${addrId}`, {
+        theme: 'snow',
+        modules: { toolbar: '#toolbar-compact' }, // Use shared compact toolbar
+        placeholder: 'Enter address here…'
+      });
+      
+      q.format('size','14px');
+      q.root.classList.add('editor-compact');
+      
+    q.on('text-change', () => {
+      const firstLine = q.getText().split('\n').find(Boolean) || '';
+      const pv = document.getElementById(`${addrId}_preview`);
+        if (pv) {
+      pv.textContent = firstLine.trim();
+      pv.style.display = firstLine.trim() ? 'block' : 'none';
+        }
+    });
+      
+      // Store the editor instance
+      editors[`${addrId.replace('_addr_', '_input_')}`] = q;
+    }, 50); // Small delay to ensure DOM is ready
+  }
+
+  let petitionerCount=0, respondentCount=0;
+
+  function buildEntry(kind, index){
+    const label = kind === 'petitioner' ? 'Petitioner' : 'Respondent';
+    const nameId = `${kind}_name_${index}`;
+    const addrId = `${kind}_addr_${index}`;
+    const inputId= `${kind}_input_${index}`;
+    const cardId = `${kind}_card_${index}`;
+
+    return `
+      <details class="entry" id="${cardId}" open>
+        <summary class="entry-head">
+          <span class="entry-title">${label} ${index+1}</span>
+          <div class="entry-actions">
+            <button type="button" class="btn-icon" onclick="toggleOpen('${cardId}')">Minimise</button>
+            <button type="button" class="btn-icon btn-danger" onclick="removeEntry('${cardId}','${inputId}','${kind}')">Delete</button>
+          </div>
+        </summary>
+        <div class="entry-body">
+          <div class="entry-row">
+            <div>
+              <label>${label} Name</label>
+              <input type="text" name="${kind}_names" id="${nameId}" required>
+            </div>
+            <div>
+              <label>${label} Address</label>
+              <input type="hidden" name="${kind}_addresses" id="${inputId}">
+              <div id="${addrId}" class="editor-compact"></div>
+              <div class="editor-preview" id="${addrId}_preview" style="display:none;"></div>
+            </div>
+          </div>
+        </div>
+      </details>
+    `;
+  }
+
+  function addPetitioner(){
+    const wrap = document.getElementById('petitioners-wrapper');
+    wrap.insertAdjacentHTML('beforeend', buildEntry('petitioner', petitionerCount));
+    attachCompactEditor(`petitioner_addr_${petitionerCount}`);
+    petitionerCount++; 
+    updateCounter('petitioners');
+  }
+
+  function addRespondent(){
+    const wrap = document.getElementById('respondents-wrapper');
+    wrap.insertAdjacentHTML('beforeend', buildEntry('respondent', respondentCount));
+    attachCompactEditor(`respondent_addr_${respondentCount}`);
+    respondentCount++; 
+    updateCounter('respondents');
+  }
+
+  function removeEntry(cardId, inputId, kind){
+    if(!confirm('Remove this entry?')) return;
+    document.getElementById(cardId)?.remove();
+    delete editors[inputId];
+    updateCounter(kind+'s');
+  }
+
+  // Copy Quill HTML into hidden inputs on submit
+  function copyQuillToInputs(){
+    for (const id in editors){
+      const html = editors[id].root.innerHTML;
+      const input = document.getElementById(id);
+      if(input) input.value = html;
+    }
+  }
+
+  flatpickr("#datePicker", { dateFormat: "d/m/Y" });
+
+  function handleSubmit(e){
+    e.preventDefault();
+    copyQuillToInputs();
+    document.getElementById("submit-msg").innerText = "Generating your document…";
+    e.target.submit();
+    return false;
+  }
+
+  // ===== Bulk Paste Parsing =====
+  let parsedPetitioners = [];
+  let parsedRespondents = [];
+
+  function parseBulkText(text, kind) {
+    const entries = [];
+    const lines = text.split('\n');
+    let currentEntry = null;
+    let hasNumberedEntries = false;
+    
+    // First pass: Check if any line has numbered format
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed.match(/^\d{1,2}\.\s+/)) {
+        hasNumberedEntries = true;
+        break;
+      }
+    }
+    
+    // If no numbered entries found, treat as single entry
+    if (!hasNumberedEntries) {
+      const nonEmptyLines = lines.filter(l => l.trim() && !l.trim().match(/^…(Petitioners|Respondents)$/i));
+      if (nonEmptyLines.length > 0) {
+        // First non-empty line is name, rest is address
+        const name = nonEmptyLines[0].trim();
+        const address = nonEmptyLines.slice(1).map(l => l.replace(/^[\s\t]+/, '').replace(/[\s\t]+$/, '')).filter(l => l);
+        
+        entries.push({
+          name: name,
+          address: address
+        });
+      }
+      return entries;
+    }
+    
+    // Original numbered parsing logic
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+      const trimmed = line.trim();
+      
+      // Skip empty lines and separators
+      if (!trimmed || trimmed.match(/^…(Petitioners|Respondents)$/i)) {
+        if (currentEntry && currentEntry.address.length > 0) {
+          entries.push(currentEntry);
+          currentEntry = null;
+        }
+        continue;
+      }
+      
+      // Check if line starts with number pattern (01., 02., etc.) - handle tabs and spaces
+      // Pattern: number(s) followed by dot, then optional whitespace/tabs, then name
+      const numberMatch = trimmed.match(/^(\d{1,2})\.\s*(.+)$/);
+      if (numberMatch) {
+        // Save previous entry if exists
+        if (currentEntry) {
+          entries.push(currentEntry);
+        }
+        // Start new entry - extract name (may contain commas)
+        const name = numberMatch[2].trim();
+        currentEntry = {
+          name: name,
+          address: []
+        };
+      } else if (currentEntry) {
+        // This is part of the address - preserve original line (with tabs/spaces) but trim edges
+        // Remove leading tabs/spaces but keep internal formatting
+        const cleaned = line.replace(/^[\s\t]+/, '').replace(/[\s\t]+$/, '');
+        if (cleaned) {
+          currentEntry.address.push(cleaned);
+        }
+      }
+    }
+    
+    // Don't forget the last entry
+    if (currentEntry) {
+      entries.push(currentEntry);
+    }
+    
+    return entries;
+  }
+
+  function parsePetitioners() {
+    const text = document.getElementById('petitioner-paste').value.trim();
+    if (!text) {
+      alert('Please paste petitioners text first.');
+      return;
+    }
+    
+    parsedPetitioners = parseBulkText(text, 'petitioner');
+    
+    if (parsedPetitioners.length === 0) {
+      alert('No petitioners found. Please check the format:\n- Numbered entries: 01. Name, 02. Name, etc.\n- Single entry: Just paste name and address (no number needed)');
+      return;
+    }
+    
+    showPetitionerPreview();
+  }
+
+  function parseRespondents() {
+    const text = document.getElementById('respondent-paste').value.trim();
+    if (!text) {
+      alert('Please paste respondents text first.');
+      return;
+    }
+    
+    parsedRespondents = parseBulkText(text, 'respondent');
+    
+    if (parsedRespondents.length === 0) {
+      alert('No respondents found. Please check the format:\n- Numbered entries: 01. Name, 02. Name, etc.\n- Single entry: Just paste name and address (no number needed)');
+      return;
+    }
+    
+    showRespondentPreview();
+  }
+
+  function showPetitionerPreview() {
+    const previewList = document.getElementById('petitioner-preview-list');
+    previewList.innerHTML = '';
+    
+    parsedPetitioners.forEach((entry, index) => {
+      const entryDiv = document.createElement('div');
+      entryDiv.className = 'entry';
+      entryDiv.style.marginBottom = '12px';
+      entryDiv.innerHTML = `
+        <div style="display:grid;gap:8px;padding:12px;background:#f8fafc;border-radius:8px;">
+          <div>
+            <label style="font-size:12px;color:var(--muted);">Name ${index + 1}:</label>
+            <input type="text" class="preview-name" data-index="${index}" value="${escapeHtml(entry.name)}" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);">Address ${index + 1}:</label>
+            <textarea class="preview-address" data-index="${index}" rows="4" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-family:monospace;font-size:12px;resize:vertical;">${escapeHtml(entry.address.join('\n'))}</textarea>
+          </div>
+        </div>
+      `;
+      previewList.appendChild(entryDiv);
+    });
+    
+    document.getElementById('petitioner-paste-section').style.display = 'none';
+    document.getElementById('petitioner-preview-section').style.display = 'block';
+    updateCounter('petitioners');
+  }
+
+  function showRespondentPreview() {
+    const previewList = document.getElementById('respondent-preview-list');
+    previewList.innerHTML = '';
+    
+    parsedRespondents.forEach((entry, index) => {
+      const entryDiv = document.createElement('div');
+      entryDiv.className = 'entry';
+      entryDiv.style.marginBottom = '12px';
+      entryDiv.innerHTML = `
+        <div style="display:grid;gap:8px;padding:12px;background:#f8fafc;border-radius:8px;">
+          <div>
+            <label style="font-size:12px;color:var(--muted);">Name ${index + 1}:</label>
+            <input type="text" class="preview-name-resp" data-index="${index}" value="${escapeHtml(entry.name)}" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);">Address ${index + 1}:</label>
+            <textarea class="preview-address-resp" data-index="${index}" rows="4" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-family:monospace;font-size:12px;resize:vertical;">${escapeHtml(entry.address.join('\n'))}</textarea>
+          </div>
+        </div>
+      `;
+      previewList.appendChild(entryDiv);
+    });
+    
+    document.getElementById('respondent-paste-section').style.display = 'none';
+    document.getElementById('respondent-preview-section').style.display = 'block';
+    updateCounter('respondents');
+  }
+
+  function addAllPetitioners() {
+    // Update parsed data from preview inputs
+    parsedPetitioners.forEach((entry, index) => {
+      const nameInput = document.querySelector(`.preview-name[data-index="${index}"]`);
+      const addrInput = document.querySelector(`.preview-address[data-index="${index}"]`);
+      if (nameInput && addrInput) {
+        entry.name = nameInput.value.trim();
+        entry.address = addrInput.value.trim().split('\n').filter(l => l.trim());
+      }
+    });
+    
+    // Get existing entries (for append mode)
+    const wrapper = document.getElementById('petitioners-wrapper');
+    const existingCount = wrapper.querySelectorAll('input[name="petitioner_names"]').length;
+    
+    // Create hidden inputs for each petitioner
+    parsedPetitioners.forEach((entry, index) => {
+      if (entry.name) {
+        const nameInput = document.createElement('input');
+        nameInput.type = 'hidden';
+        nameInput.name = 'petitioner_names';
+        nameInput.value = entry.name;
+        nameInput.dataset.index = existingCount + index;
+        wrapper.appendChild(nameInput);
+        
+        const addrInput = document.createElement('input');
+        addrInput.type = 'hidden';
+        addrInput.name = 'petitioner_addresses';
+        addrInput.value = entry.address.join('\n');
+        addrInput.dataset.index = existingCount + index;
+        wrapper.appendChild(addrInput);
+      }
+    });
+    
+    // Hide preview and paste section, show added section
+    document.getElementById('petitioner-preview-section').style.display = 'none';
+    document.getElementById('petitioner-paste-section').style.display = 'none';
+    document.getElementById('petitioner-paste').value = '';
+    
+    // Show added section and update display
+    showAddedPetitioners();
+    parsedPetitioners = [];
+  }
+
+  function addAllRespondents() {
+    // Update parsed data from preview inputs
+    parsedRespondents.forEach((entry, index) => {
+      const nameInput = document.querySelector(`.preview-name-resp[data-index="${index}"]`);
+      const addrInput = document.querySelector(`.preview-address-resp[data-index="${index}"]`);
+      if (nameInput && addrInput) {
+        entry.name = nameInput.value.trim();
+        entry.address = addrInput.value.trim().split('\n').filter(l => l.trim());
+      }
+    });
+    
+    // Get existing entries (for append mode)
+    const wrapper = document.getElementById('respondents-wrapper');
+    const existingCount = wrapper.querySelectorAll('input[name="respondent_names"]').length;
+    
+    // Create hidden inputs for each respondent
+    parsedRespondents.forEach((entry, index) => {
+      if (entry.name) {
+        const nameInput = document.createElement('input');
+        nameInput.type = 'hidden';
+        nameInput.name = 'respondent_names';
+        nameInput.value = entry.name;
+        nameInput.dataset.index = existingCount + index;
+        wrapper.appendChild(nameInput);
+        
+        const addrInput = document.createElement('input');
+        addrInput.type = 'hidden';
+        addrInput.name = 'respondent_addresses';
+        addrInput.value = entry.address.join('\n');
+        addrInput.dataset.index = existingCount + index;
+        wrapper.appendChild(addrInput);
+      }
+    });
+    
+    // Hide preview and paste section, show added section
+    document.getElementById('respondent-preview-section').style.display = 'none';
+    document.getElementById('respondent-paste-section').style.display = 'none';
+    document.getElementById('respondent-paste').value = '';
+    
+    // Show added section and update display
+    showAddedRespondents();
+    parsedRespondents = [];
+  }
+
+  function cancelPetitionerPreview() {
+    document.getElementById('petitioner-preview-section').style.display = 'none';
+    document.getElementById('petitioner-paste-section').style.display = 'block';
+    parsedPetitioners = [];
+  }
+
+  function cancelRespondentPreview() {
+    document.getElementById('respondent-preview-section').style.display = 'none';
+    document.getElementById('respondent-paste-section').style.display = 'block';
+    parsedRespondents = [];
+  }
+
+  function showAddedPetitioners() {
+    const wrapper = document.getElementById('petitioners-wrapper');
+    const names = wrapper.querySelectorAll('input[name="petitioner_names"]');
+    const addresses = wrapper.querySelectorAll('input[name="petitioner_addresses"]');
+    const addedList = document.getElementById('petitioners-added-list');
+    
+    addedList.innerHTML = '';
+    
+    names.forEach((nameInput, index) => {
+      const addrInput = addresses[index];
+      if (nameInput && addrInput) {
+        const entryDiv = document.createElement('div');
+        entryDiv.id = `petitioner-entry-${index}`;
+        entryDiv.className = 'entry';
+        entryDiv.style.marginBottom = '8px';
+        entryDiv.innerHTML = `
+          <div style="padding:12px;background:#f8fafc;border-radius:8px;border:1px solid var(--line);">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+              <div style="flex:1;">
+                <div style="font-weight:600;margin-bottom:4px;">${index + 1}. ${escapeHtml(nameInput.value)}</div>
+                <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;">${escapeHtml(addrInput.value)}</div>
+              </div>
+              <div style="display:flex;gap:4px;margin-left:12px;">
+                <button type="button" class="btn-icon" onclick="editPetitioner(${index})" title="Edit">✏️</button>
+                <button type="button" class="btn-icon btn-danger" onclick="deletePetitioner(${index})" title="Delete">🗑️</button>
+              </div>
+            </div>
+          </div>
+        `;
+        addedList.appendChild(entryDiv);
+      }
+    });
+    
+    document.getElementById('petitioner_count_display').textContent = `(${names.length})`;
+    document.getElementById('petitioners-added-section').style.display = 'block';
+    updateCounter('petitioners');
+  }
+
+  function showAddedRespondents() {
+    const wrapper = document.getElementById('respondents-wrapper');
+    const names = wrapper.querySelectorAll('input[name="respondent_names"]');
+    const addresses = wrapper.querySelectorAll('input[name="respondent_addresses"]');
+    const addedList = document.getElementById('respondents-added-list');
+    
+    addedList.innerHTML = '';
+    
+    names.forEach((nameInput, index) => {
+      const addrInput = addresses[index];
+      if (nameInput && addrInput) {
+        const entryDiv = document.createElement('div');
+        entryDiv.id = `respondent-entry-${index}`;
+        entryDiv.className = 'entry';
+        entryDiv.style.marginBottom = '8px';
+        entryDiv.innerHTML = `
+          <div style="padding:12px;background:#f8fafc;border-radius:8px;border:1px solid var(--line);">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+              <div style="flex:1;">
+                <div style="font-weight:600;margin-bottom:4px;">${index + 1}. ${escapeHtml(nameInput.value)}</div>
+                <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;">${escapeHtml(addrInput.value)}</div>
+              </div>
+              <div style="display:flex;gap:4px;margin-left:12px;">
+                <button type="button" class="btn-icon" onclick="editRespondent(${index})" title="Edit">✏️</button>
+                <button type="button" class="btn-icon btn-danger" onclick="deleteRespondent(${index})" title="Delete">🗑️</button>
+              </div>
+            </div>
+          </div>
+        `;
+        addedList.appendChild(entryDiv);
+      }
+    });
+    
+    document.getElementById('respondent_count_display').textContent = `(${names.length})`;
+    document.getElementById('respondents-added-section').style.display = 'block';
+    updateCounter('respondents');
+  }
+
+  function showPetitionerPaste() {
+    document.getElementById('petitioner-paste-section').style.display = 'block';
+    document.getElementById('petitioner-paste').focus();
+  }
+
+  function showRespondentPaste() {
+    document.getElementById('respondent-paste-section').style.display = 'block';
+    document.getElementById('respondent-paste').focus();
+  }
+
+  function clearAllPetitioners() {
+    if (confirm('Clear all petitioners? This cannot be undone.')) {
+      const wrapper = document.getElementById('petitioners-wrapper');
+      wrapper.innerHTML = '';
+      document.getElementById('petitioner-paste').value = '';
+      parsedPetitioners = [];
+      document.getElementById('petitioners-added-section').style.display = 'none';
+      document.getElementById('petitioner-paste-section').style.display = 'block';
+      updateCounter('petitioners');
+    }
+  }
+
+  function clearAllRespondents() {
+    if (confirm('Clear all respondents? This cannot be undone.')) {
+      const wrapper = document.getElementById('respondents-wrapper');
+      wrapper.innerHTML = '';
+      document.getElementById('respondent-paste').value = '';
+      parsedRespondents = [];
+      document.getElementById('respondents-added-section').style.display = 'none';
+      document.getElementById('respondent-paste-section').style.display = 'block';
+      updateCounter('respondents');
+    }
+  }
+
+  // Edit/Delete functions for Petitioners
+  function editPetitioner(index) {
+    const wrapper = document.getElementById('petitioners-wrapper');
+    const names = wrapper.querySelectorAll('input[name="petitioner_names"]');
+    const addresses = wrapper.querySelectorAll('input[name="petitioner_addresses"]');
+    
+    if (names[index] && addresses[index]) {
+      const currentName = names[index].value;
+      const currentAddress = addresses[index].value;
+      
+      const entryDiv = document.getElementById(`petitioner-entry-${index}`);
+      entryDiv.innerHTML = `
+        <div style="padding:12px;background:#fff;border-radius:8px;border:2px solid var(--primary);">
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Name:</label>
+            <input type="text" id="edit-pet-name-${index}" value="${escapeHtml(currentName)}" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;">
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Address:</label>
+            <textarea id="edit-pet-addr-${index}" rows="4" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-family:monospace;font-size:12px;resize:vertical;">${escapeHtml(currentAddress)}</textarea>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn-primary" onclick="savePetitioner(${index})" style="padding:6px 12px;font-size:13px;">Save</button>
+            <button type="button" class="btn-icon" onclick="showAddedPetitioners()" style="padding:6px 12px;font-size:13px;">Cancel</button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  function savePetitioner(index) {
+    const wrapper = document.getElementById('petitioners-wrapper');
+    const names = wrapper.querySelectorAll('input[name="petitioner_names"]');
+    const addresses = wrapper.querySelectorAll('input[name="petitioner_addresses"]');
+    
+    const nameInput = document.getElementById(`edit-pet-name-${index}`);
+    const addrInput = document.getElementById(`edit-pet-addr-${index}`);
+    
+    if (names[index] && addresses[index] && nameInput && addrInput) {
+      names[index].value = nameInput.value.trim();
+      addresses[index].value = addrInput.value.trim();
+      showAddedPetitioners(); // Refresh display
+    }
+  }
+
+  function deletePetitioner(index) {
+    if (confirm('Delete this petitioner?')) {
+      const wrapper = document.getElementById('petitioners-wrapper');
+      const names = wrapper.querySelectorAll('input[name="petitioner_names"]');
+      const addresses = wrapper.querySelectorAll('input[name="petitioner_addresses"]');
+      
+      if (names[index] && addresses[index]) {
+        names[index].remove();
+        addresses[index].remove();
+        showAddedPetitioners(); // Refresh display
+      }
+    }
+  }
+
+  // Edit/Delete functions for Respondents
+  function editRespondent(index) {
+    const wrapper = document.getElementById('respondents-wrapper');
+    const names = wrapper.querySelectorAll('input[name="respondent_names"]');
+    const addresses = wrapper.querySelectorAll('input[name="respondent_addresses"]');
+    
+    if (names[index] && addresses[index]) {
+      const currentName = names[index].value;
+      const currentAddress = addresses[index].value;
+      
+      const entryDiv = document.getElementById(`respondent-entry-${index}`);
+      entryDiv.innerHTML = `
+        <div style="padding:12px;background:#fff;border-radius:8px;border:2px solid var(--primary);">
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Name:</label>
+            <input type="text" id="edit-resp-name-${index}" value="${escapeHtml(currentName)}" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;">
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Address:</label>
+            <textarea id="edit-resp-addr-${index}" rows="4" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-family:monospace;font-size:12px;resize:vertical;">${escapeHtml(currentAddress)}</textarea>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn-primary" onclick="saveRespondent(${index})" style="padding:6px 12px;font-size:13px;">Save</button>
+            <button type="button" class="btn-icon" onclick="showAddedRespondents()" style="padding:6px 12px;font-size:13px;">Cancel</button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  function saveRespondent(index) {
+    const wrapper = document.getElementById('respondents-wrapper');
+    const names = wrapper.querySelectorAll('input[name="respondent_names"]');
+    const addresses = wrapper.querySelectorAll('input[name="respondent_addresses"]');
+    
+    const nameInput = document.getElementById(`edit-resp-name-${index}`);
+    const addrInput = document.getElementById(`edit-resp-addr-${index}`);
+    
+    if (names[index] && addresses[index] && nameInput && addrInput) {
+      names[index].value = nameInput.value.trim();
+      addresses[index].value = addrInput.value.trim();
+      showAddedRespondents(); // Refresh display
+    }
+  }
+
+  function deleteRespondent(index) {
+    if (confirm('Delete this respondent?')) {
+      const wrapper = document.getElementById('respondents-wrapper');
+      const names = wrapper.querySelectorAll('input[name="respondent_names"]');
+      const addresses = wrapper.querySelectorAll('input[name="respondent_addresses"]');
+      
+      if (names[index] && addresses[index]) {
+        names[index].remove();
+        addresses[index].remove();
+        showAddedRespondents(); // Refresh display
+      }
+    }
+  }
+
+  function clearPetitioners() {
+    document.getElementById('petitioner-paste').value = '';
+    parsedPetitioners = [];
+  }
+
+  function clearRespondents() {
+    document.getElementById('respondent-paste').value = '';
+    parsedRespondents = [];
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Update counter to check hidden inputs
+  function updateCounter(kind){
+    const wrapper = document.getElementById(`${kind}-wrapper`);
+    const empty = document.getElementById(`${kind}-empty`);
+    const count = wrapper.querySelectorAll('input[type="hidden"]').length / 2; // Divide by 2 (name + address)
+    document.getElementById(`${kind.slice(0,-1)}_count`).textContent = `(${count})`;
+    if (empty) {
+      empty.style.display = count === 0 ? 'block' : 'none';
+    }
+  }
+
+  // initialize empty states
+  updateCounter('petitioners'); 
+  updateCounter('respondents');
+</script>
+{% endblock %}
