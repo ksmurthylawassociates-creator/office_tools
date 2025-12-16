@@ -1,0 +1,275 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Invoice {{ invoice["invoice_id"] }}</title>
+  <style>
+    @page { size: A4; margin: 18mm }
+    :root { --ink:#111827; --muted:#4b5563; --line:#d1d5db; --blue:#3b82f6; --green:#22c55e; --gray:#e5e7eb }
+    * { box-sizing: border-box }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--ink) }
+
+    .wrap { max-width: 780px; margin: 0 auto }
+    .toolbar { display:flex; gap:0.75rem; margin-bottom:20px; flex-wrap:wrap }
+    .btn { 
+      display:inline-flex; 
+      align-items:center; 
+      gap:0.5rem; 
+      padding:0.75rem 1.25rem; 
+      font-size:0.875rem; 
+      font-weight:600; 
+      border:none; 
+      border-radius:0.5rem; 
+      cursor:pointer; 
+      text-decoration:none;
+      transition:all 0.2s;
+    }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    .btn-back { background: var(--muted); color: #fff }
+    .btn-edit { background: var(--blue); color: #fff }
+    .btn-print { background: var(--green); color: #fff }
+
+    /* Letterhead (left) */
+    .letterhead { text-align: left; margin-bottom: 12px; }
+    .name { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
+    .role { color: var(--muted); font-size: 14px; }
+
+    /* Header with Ref No and Date */
+    .header-meta { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      margin: 10px 0 20px;
+    }
+    .ref-no { text-align: left; }
+    .ref-date { text-align: right; }
+    .ref-no p, .ref-date p { margin: 4px 0; font-size: 14px; }
+
+    /* Two horizontal lines */
+    .hr-lines { margin: 12px 0 16px; }
+    .hr-lines hr { border: 1px solid black; margin: 0; }
+
+    /* To section */
+    .to-section { margin: 16px 0; }
+    .to-section p { margin: 0; line-height: 1.4; }
+
+    /* Subject */
+    .subject { margin: 16px 0 20px; line-height: 1.6; font-size: 14px; }
+
+    /* Title */
+    .title { 
+      text-align: center; 
+      font-weight: 700; 
+      margin: 20px 0 16px; 
+      text-transform: uppercase;
+      text-decoration: underline;
+      font-size: 16px;
+    }
+    .title-invoice {
+      text-align: center;
+      font-weight: 700;
+      margin: 8px 0 20px;
+      text-transform: uppercase;
+      text-decoration: underline;
+      font-size: 16px;
+    }
+
+    /* Table */
+    table { width:100%; border-collapse: collapse; margin-top: 8px }
+    th, td { border: 1px solid var(--line); padding: 10px 8px; vertical-align: top; text-align: left; }
+    th { background: #f9fafb; font-weight: 600; font-size: 13px; }
+    .right { text-align: right }
+    .center { text-align: center }
+    .sno-col { width: 60px; text-align: center; }
+    .desc-col { width: auto; }
+    .amount-col { width: 150px; text-align: right; }
+
+    /* Payment instruction */
+    .payment-note { 
+      margin-top: 20px; 
+      margin-bottom: 30px; 
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    /* Bank details and Signature section - side by side just above lines */
+    .bank-signature-section {
+      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .bank-section {
+      flex: 1;
+    }
+    .bank { 
+      font-size: 14px; 
+      line-height: 1.4;
+    }
+    .bank strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .bank br {
+      line-height: 1.4;
+    }
+    
+    /* Signature section - bottom right just above lines */
+    .signature-section {
+      text-align: right;
+      min-width: 200px;
+    }
+    .signature-section p {
+      margin: 0;
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    /* Two horizontal lines */
+    .hr-lines {
+      margin: 0 0 2px 0;
+    }
+
+    /* Address - centered below the dark line, close to line */
+    .addr { 
+      margin-top: 0;
+      text-align: center;
+      font-size: 15px; 
+      line-height: 1.2; 
+      white-space: pre-line;
+    }
+
+    /* keep blocks together when printing */
+    .avoid-break { break-inside: avoid; page-break-inside: avoid }
+
+    @media print {
+      .no-print { display:none }
+      a { text-decoration: none; color: inherit }
+      .wrap { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="toolbar no-print">
+      <a href="{{ url_for('invoice_list') }}" class="btn btn-back">← Back</a>
+      <a href="{{ url_for('invoice_edit_form', invoice_id=invoice['invoice_id']) }}" class="btn btn-edit">✏️ Edit</a>
+      <button id="printBtn" class="btn btn-print">🖨️ Print</button>
+    </div>
+
+    <!-- Letterhead -->
+    <div class="letterhead">
+      <div class="name">{{ invoice.get('firm_name', 'K. Srinivas Murthy') }}</div>
+      {% if invoice.get('firm_role') %}
+      <div class="role">{{ invoice.get('firm_role', 'Senior Advocate') }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Two horizontal lines -->
+    <div class="hr-lines">
+      <hr>
+      <hr>
+    </div>
+
+    <!-- Header with Ref No and Date -->
+    <div class="header-meta">
+      <div class="ref-no">
+        <p><strong>Ref No:</strong> {{ invoice.get('ref_no', 'N/A') }}</p>
+      </div>
+      <div class="ref-date">
+        <p><strong>Date:</strong> {{ invoice["issue_date"]|ddmmyyyy }}</p>
+      </div>
+    </div>
+
+    <!-- To Section -->
+    <div class="to-section">
+      <p><strong>To,</strong></p>
+      {% if invoice.get('recipient_name') %}
+      <p>{{ invoice.get('recipient_name') }}</p>
+      {% endif %}
+      {% if invoice.get('recipient_address') %}
+      <p style="white-space: pre-line;">{{ invoice.get('recipient_address') }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Subject -->
+    <p class="subject">
+      <strong>Sub:</strong> Engagement of Senior Counsel at the High Court of Andhra Pradesh - Professional Fee - <strong>{{ invoice.get('subject_continuation', '') }}</strong>
+    </p>
+
+    <!-- Title -->
+    <h2 class="title">Memorandum of Professional Fee</h2>
+    <h2 class="title-invoice">Invoice</h2>
+
+    <!-- Table -->
+    <table class="avoid-break">
+      <thead>
+        <tr>
+          <th class="sno-col">S.No.</th>
+          <th class="desc-col">Description</th>
+          <th class="amount-col">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set ns = namespace(total=0) %}
+        {% for i in invoice["items"] %}
+          {% set amt = (i["qty"]|float * i["rate"]|float) %}
+          {% set ns.total = ns.total + amt %}
+          <tr>
+            <td class="center">{{ loop.index }}</td>
+            <td>{{ i["description"] }}</td>
+            <td class="right">Rs. {{ amt|inr }}</td>
+          </tr>
+        {% endfor %}
+        <tr>
+          <td class="center"><strong>Total</strong></td>
+          <td><strong>Total Amount</strong></td>
+          <td class="right"><strong>Rs. {{ ns.total|inr }}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Payment Instruction -->
+    <p class="payment-note">
+      Arrange to pay the sum of <strong>Rs.{{ ns.total|inr }}</strong> ({{ ns.total|number_to_words }}) against the bill.
+    </p>
+
+    <!-- Bank Details and Signature Section - Side by side just above the thick dark line -->
+    <div class="bank-signature-section avoid-break">
+      <div class="bank-section">
+        <div class="bank">
+          <strong>Bank Details:</strong>
+          {% if invoice.get('bank_option') == 'option2' %}
+          K SRINIVAS MURTHY<br>Acc No : 36980066718<br>IFSC : SBIN0061328<br>State Bank of India (SBI)<br>AP High Court Branch, Amaravati<br>PAN No : AEMPK0602G
+          {% else %}
+          K Srinivas Murthy<br>Acc No : 36980066718<br>IFSC    : SBIN006138<br>State Bank of India<br>AP High Court Branch, Amaravati<br>PAN No : AEMPK0602G
+          {% endif %}
+        </div>
+      </div>
+      <div class="signature-section">
+        <p><strong>{{ invoice.get('firm_name', 'K. SRINIVAS MURTHY') }}</strong></p>
+        <p>{{ invoice.get('firm_role', 'Sr. ADVOCATE') }}</p>
+      </div>
+    </div>
+
+    <!-- Two horizontal dark lines -->
+    <div class="hr-lines">
+      <hr>
+      <hr>
+    </div>
+
+    <!-- Address - Centered below the dark line -->
+    <div class="addr">
+      # 23-1-2, Ground Floor, Sri Sai Viswanatha Towers, Satyaranayanapuram, Vijayawada - 520011.
+    </div>
+
+  <script>
+    document.getElementById('printBtn')?.addEventListener('click', function(){ window.print(); });
+  </script>
+  {% if auto_print %}
+  <script>
+    window.addEventListener('load', function(){ window.print(); });
+  </script>
+  {% endif %}
+</body>
+</html>

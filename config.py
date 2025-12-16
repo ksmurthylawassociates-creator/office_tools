@@ -29,6 +29,9 @@ class Config:
     # WTForms CSRF settings
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None  # No time limit for CSRF tokens
+    
+    # Invoice Generator password protection
+    INVOICE_GENERATOR_PASSWORD = os.environ.get('INVOICE_GENERATOR_PASSWORD') or 'invoice123'  # Change this in production
 
 class DevelopmentConfig(Config):
     """Development configuration."""

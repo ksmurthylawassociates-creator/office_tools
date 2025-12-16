@@ -17,6 +17,9 @@ instance/
 .env
 .env.local
 
+# Firebase credentials (sensitive - keep private)
+firebase-key.json
+
 # Logs
 *.log
 app.log

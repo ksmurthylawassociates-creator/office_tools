@@ -73,6 +73,13 @@
                 <p>Generate {{ info.name }} document</p>
             </a>
         {% endfor %}
+        
+        <!-- Invoice Generator Card -->
+        <a href="{{ url_for('invoice_password') }}" class="template-card" id="invoiceCard">
+            <div class="template-icon">💰</div>
+            <h3>Invoice Generator</h3>
+            <p>Create and manage invoices</p>
+        </a>
     </div>
 </div>
 {% endblock %}

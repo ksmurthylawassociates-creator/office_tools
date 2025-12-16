@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Invoice - Document Generator{% endblock %}
+
+{% block extra_css %}
+
+  <style>
+    :root{
+      --ink:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --blue:#3b82f6;
+      --blue-dark:#2563eb;
+      --green:#22c55e;
+      --gray:#f3f4f6;
+      --white:#ffffff;
+      --shadow:0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --shadow-md:0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .container {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    
+    .card {
+      background: var(--white);
+      border-radius: 0.75rem;
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    h1{margin:0 0 1.5rem;font-size:1.75rem;font-weight:700}
+    h3{margin:1.5rem 0 0.75rem;font-size:1.125rem;font-weight:600}
+    label{display:block;margin:1rem 0 0.5rem;font-weight:600;color:var(--ink)}
+    input[type="text"], input[type="radio"], textarea, select{
+      font-size:1rem;
+    }
+    input[type="text"], textarea{
+      width:100%;
+      padding:0.75rem;
+      border:1px solid var(--line);
+      border-radius:0.5rem;
+      transition:border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="text"]:focus, textarea:focus{
+      outline:none;
+      border-color:var(--blue);
+      box-shadow:0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    textarea{resize:vertical;min-height:80px}
+    .radio-group{
+      display:flex;
+      gap:1.5rem;
+      margin:0.75rem 0;
+      flex-wrap:wrap;
+    }
+    .radio-option{
+      display:flex;
+      align-items:center;
+      gap:0.5rem;
+    }
+    .radio-option input[type="radio"]{
+      width:18px;
+      height:18px;
+      cursor:pointer;
+    }
+    .radio-option label{
+      margin:0;
+      font-weight:500;
+      cursor:pointer;
+    }
+    table{width:100%;border-collapse:collapse;margin-top:1rem}
+    th,td{border:1px solid var(--line);padding:1rem;vertical-align:top}
+    th{background:var(--gray);text-align:left;font-weight:600;font-size:0.875rem}
+    .right{text-align:right}
+    .toolbar{display:flex;gap:0.75rem;margin-bottom:1.5rem}
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:0.5rem;
+      padding:0.75rem 1.25rem;
+      font-size:0.875rem;
+      font-weight:600;
+      border:none;
+      border-radius:0.5rem;
+      cursor:pointer;
+      text-decoration:none;
+      transition:all 0.2s;
+    }
+    .btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+    .btn-back{background:var(--muted);color:var(--white)}
+    .btn-add{background:var(--blue);color:#fff}
+    .btn-add:hover{background:var(--blue-dark)}
+    .btn-save{background:var(--green);color:#fff;padding:0.875rem 2rem;font-size:1rem}
+    .total{margin-top:1.5rem;text-align:right;font-weight:700;font-size:1.25rem;padding:1rem;background:var(--gray);border-radius:0.5rem}
+    .hint{color:var(--muted);font-size:0.8125rem;margin-top:0.25rem}
+    .date-row{display:flex;gap:0.75rem;align-items:center}
+    .date-row .calendar-btn{
+      padding:0.75rem 1rem;
+      border:1px solid var(--line);
+      background:var(--white);
+      border-radius:0.5rem;
+      cursor:pointer;
+      font-size:1.25rem;
+      transition:all 0.2s;
+    }
+    .date-row .calendar-btn:hover{background:var(--gray)}
+    .form-section{
+      margin-bottom:2rem;
+      padding-bottom:1.5rem;
+      border-bottom:1px solid var(--line);
+    }
+    .form-section:last-child{
+      border-bottom:none;
+    }
+    
+    /* Bank Details Cards */
+    .bank-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .bank-card {
+      background: var(--white);
+      border: 2px solid var(--line);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .bank-card:hover {
+      border-color: var(--blue);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .bank-card.selected {
+      border-color: var(--blue);
+      background: rgba(59, 130, 246, 0.05);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .bank-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .bank-card-check {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--line);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+    }
+    .bank-card.selected .bank-card-check {
+      border-color: var(--blue);
+      background: var(--blue);
+    }
+    .bank-card.selected .bank-card-check::after {
+      content: '✓';
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .bank-card-content {
+      font-size: 0.875rem;
+      line-height: 1.2;
+      white-space: pre-line;
+      color: var(--ink);
+    }
+    .bank-card-content strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.9375rem;
+    }
+    
+    @media (max-width: 768px) {
+      .container { padding: 0 0.75rem; }
+      .card { padding: 1.5rem; }
+      table { font-size: 0.875rem; }
+      th, td { padding: 0.75rem 0.5rem; }
+      .radio-group { flex-direction: column; gap: 0.75rem; }
+      .bank-cards { grid-template-columns: 1fr; }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="toolbar">
+      <a href="{{ url_for('invoice_list') }}" class="btn btn-back">← Back to Invoices</a>
+    </div>
+
+    <div class="card">
+      <h1>Create New Invoice</h1>
+
+      <form id="invoiceForm" method="post" action="{{ url_for('create_invoice') }}" oninput="calcTotal()">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <!-- Firm Type Selection -->
+      if(n===""||n===null||n===undefined) return "";
+      const num=Number(String(n).replace(/,/g,""));
+      if(isNaN(num)) return "";
+      const s=num.toFixed(2);
+      const [whole, frac]=s.split(".");
+      const last3=whole.slice(-3), head=whole.slice(0,-3);
+      const headFmt=head.replace(/\B(?=(\d{2})+(?!\d))/g,",");
+      return (head?headFmt+",":"")+last3+"."+frac;
+    }
+    function parseINR(s){ return Number(String(s||"").replace(/,/g,""))||0; }
+    function validDDMMYYYY(s){ return /^(\d{2})\/(\d{2})\/(\d{4})$/.test(s); }
+
+    function calcTotal(){
+      let sum=0;
+      document.querySelectorAll('input.money').forEach(inp=> sum+=parseINR(inp.value));
+      const el=document.getElementById('formTotal');
+      if(el) el.textContent=formatINR(sum);
+    }
+
+    function addRow(){
+      const tbody=document.getElementById('itemsBody');
+      const idx=tbody.querySelectorAll('tr.item-row').length;
+      const tr=document.createElement('tr'); tr.className='item-row';
+      tr.innerHTML=`
+        <td>
+          <input type="text" name="items-${idx}-description" placeholder="Nature of Engagement" required>
+          <div class="hint">e.g., Appearance / Drafting / Opinion</div>
+        </td>
+        <td class="right" style="width:200px">
+          <input type="text" class="money" inputmode="decimal" value="0.00"
+                 oninput="this.value=this.value.replace(/[^0-9.,]/g,''); calcTotal();"
+                 onblur="this.value=formatINR(this.value)" required>
+          <input type="hidden" name="items-${idx}-qty" value="1">
+          <input type="hidden" name="items-${idx}-rate" class="rate-hidden">
+        </td>
+        <td style="width:110px">
+          <button type="button" class="btn" style="background:#e5e7eb;color:#111827"
+                  onclick="this.closest('tr').remove(); calcTotal();">Remove</button>
+        </td>`;
+      tbody.appendChild(tr);
+    }
+        <div class="form-section">
+          <label>Select Firm Type</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="firm_individual" name="firm_type" value="individual" checked>
+              <label for="firm_individual">K. Srinivas Murthy - Senior Advocate</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="firm_associates" name="firm_type" value="associates">
+              <label for="firm_associates">K. S. Murthy Associates</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Date -->
+        <div class="form-section">
+          <label>Date</label>
+          <div class="date-row">
+            <input id="date_display" type="text" placeholder="dd/mm/yyyy" required>
+            <button class="calendar-btn" type="button" id="open_calendar" aria-label="Open calendar">📅</button>
+          </div>
+          <input id="issue_date" name="issue_date" type="hidden">
+          <input id="date_native" type="hidden">
+          <div class="hint">Reference number will be auto-generated based on date</div>
+        </div>
+
+        <!-- Recipient Information -->
+        <div class="form-section">
+          <label>To (Recipient Name)</label>
+          <input type="text" name="recipient_name" placeholder="e.g., The Managing Director, Sri City (P) Ltd." required>
+          
+          <label style="margin-top:1rem;">Recipient Address / Additional Details</label>
+          <textarea name="recipient_address" rows="3" placeholder="Enter recipient address or additional details"></textarea>
+        </div>
+
+        <!-- Subject -->
+        <div class="form-section">
+          <label>Subject Continuation</label>
+          <input type="text" name="subject_continuation" placeholder="e.g., MADRASU BABU -Vs- THE STATE OF ANDHRA PRADESH & Others (R12. Sri City Pvt Ltd)" required>
+          <div class="hint">This will be appended to: "Sub: Engagement of Senior Counsel at the High Court of Andhra Pradesh - Professional Fee -"</div>
+        </div>
+
+        <!-- Fee Lines -->
+        <div class="form-section">
+          <h3>Fee Lines</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nature of Engagement</th>
+                <th class="right">Fee (Rs)</th>
+                <th style="width:110px">Action</th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody">
+              <tr class="item-row">
+                <td>
+                  <input type="text" name="items-0-description" placeholder="e.g., Appearance" required>
+                  <div class="hint">Add more rows for drafting, conference, etc.</div>
+                </td>
+                <td class="right">
+                  <input type="text" class="money" inputmode="decimal" value="0.00"
+                         oninput="this.value=this.value.replace(/[^0-9.,]/g,''); calcTotal();"
+                         onblur="this.value=formatINR(this.value)" required>
+                  <input type="hidden" name="items-0-qty" value="1">
+                  <input type="hidden" name="items-0-rate" class="rate-hidden">
+                </td>
+                <td>
+                  <button type="button" class="btn" style="background:#e5e7eb;color:#111827"
+                          onclick="this.closest('tr').remove(); calcTotal();">Remove</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="margin-top:10px;">
+            <button type="button" class="btn btn-add" onclick="addRow()">+ Add Row</button>
+          </div>
+
+          <div class="total">Total: ₹ <span id="formTotal">0</span></div>
+        </div>
+
+        <!-- Bank Details Option -->
+        <div class="form-section">
+          <label>Bank Details</label>
+          <div class="bank-cards">
+            <div class="bank-card selected" data-option="option1" onclick="selectBankOption('option1')">
+              <input type="radio" id="bank_option1" name="bank_option" value="option1" checked>
+              <div class="bank-card-check"></div>
+              <div class="bank-card-content">
+                <strong>Bank Details:</strong>
+                K Srinivas Murthy<br>Acc No : 36980066718<br>IFSC    : SBIN006138<br>State Bank of India<br>AP High Court Branch, Amaravati<br>PAN No : AEMPK0602G
+              </div>
+            </div>
+            <div class="bank-card" data-option="option2" onclick="selectBankOption('option2')">
+              <input type="radio" id="bank_option2" name="bank_option" value="option2">
+              <div class="bank-card-check"></div>
+              <div class="bank-card-content">
+                <strong>Bank Details:</strong>
+                K SRINIVAS MURTHY<br>Acc No : 36980066718<br>IFSC : SBIN0061328<br>State Bank of India (SBI)<br>AP High Court Branch, Amaravati<br>PAN No : AEMPK0602G
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:flex-end;">
+          <a href="{{ url_for('invoice_list') }}" class="btn btn-back" style="text-decoration:none;">Cancel</a>
+          <button type="submit" class="btn btn-save">💾 Save Invoice</button>
+        </div>
+      </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ---------- Date picker that always works (toggle type on the visible input) ----------
+    (function(){
+      var display = document.getElementById('date_display');
+      var isoShadow = document.getElementById('date_native');
+      var openBtn = document.getElementById('open_calendar');
+
+      function ddmmyyyyToday(){
+        var t=new Date(), dd=String(t.getDate()).padStart(2,'0'),
+            mm=String(t.getMonth()+1).padStart(2,'0'),
+            yyyy=t.getFullYear();
+        return dd+"/"+mm+"/"+yyyy;
+      }
+      function toISO(s){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s||""); return m? (m[3]+"-"+m[2]+"-"+m[1]) : ""; }
+      function fromISO(s){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||""); return m? (m[3]+"/"+m[2]+"/"+m[1]) : ""; }
+
+      if (!display.value) {
+        display.value = ddmmyyyyToday();
+        isoShadow.value = toISO(display.value);
+      }
+
+      function openCalendarOnDisplay(){
+        var prev = display.value;
+        display.dataset.prev = prev;
+        display.type = 'date';
+        var iso = toISO(prev);
+        if (iso) display.value = iso;
+        display.focus();
+        if (typeof display.showPicker === 'function') {
+          try { display.showPicker(); } catch(e) { /* ignore */ }
+        }
+      }
+
+      function restoreFromDateInput(){
+        if (display.type !== 'date') return;
+        var txt = fromISO(display.value) || display.dataset.prev || "";
+        display.type = 'text';
+        display.value = txt;
+        isoShadow.value = toISO(txt);
+      }
+
+      openBtn.addEventListener('click', openCalendarOnDisplay);
+      display.addEventListener('click', function(){
+        if (display.type === 'text') openCalendarOnDisplay();
+      });
+      display.addEventListener('change', restoreFromDateInput);
+      display.addEventListener('blur', restoreFromDateInput);
+      display.addEventListener('keydown', function(e){
+        if (display.type === 'date' && (e.key === 'Enter' || e.key === 'Escape' || e.key === 'Tab')) {
+          setTimeout(restoreFromDateInput, 0);
+        }
+      });
+    })();
+
+    // ---------- Robust submit: validate date, reindex rows, push numeric fees ----------
+    (function(){
+      function onSubmit(e){
+        var dateStr = (document.getElementById('date_display').value || "").trim();
+        if(!validDDMMYYYY(dateStr)){
+          e.preventDefault(); alert("Please enter Date as dd/mm/yyyy"); return false;
+        }
+        document.getElementById('issue_date').value = dateStr;
+
+        var rows = document.querySelectorAll('#itemsBody tr.item-row');
+        rows.forEach(function(row, i){
+          var desc = row.querySelector('input[name$="-description"]') || row.querySelector('input[placeholder*="Nature"]');
+          if (desc) desc.name = 'items-' + i + '-description';
+
+          var qty = row.querySelector('input[type="hidden"][name$="-qty"]');
+          if (!qty) { qty = document.createElement('input'); qty.type='hidden'; row.appendChild(qty); }
+          qty.name = 'items-' + i + '-qty';
+          qty.value = '1';
+
+          var rateHidden = row.querySelector('input.rate-hidden');
+          if (!rateHidden) { rateHidden = document.createElement('input'); rateHidden.type='hidden'; rateHidden.className='rate-hidden'; row.appendChild(rateHidden); }
+          rateHidden.name = 'items-' + i + '-rate';
+
+          var money = row.querySelector('input.money');
+          var numeric = Number(String(money && money.value || '0').replace(/,/g,'')) || 0;
+          rateHidden.value = String(numeric);
+        });
+        return true;
+      }
+
+      document.addEventListener('DOMContentLoaded', function(){
+        document.querySelectorAll('input.money').forEach(function(inp){
+          inp.value = formatINR(parseINR(inp.value||"0"));
+        });
+        calcTotal();
+        var form=document.getElementById('invoiceForm');
+        if(form){ form.addEventListener('submit', onSubmit); }
+      });
+    })();
+
+    function selectBankOption(option){
+      // Remove selected class from all cards
+      document.querySelectorAll('.bank-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      // Add selected class to clicked card
+      const clickedCard = document.querySelector(`[data-option="${option}"]`);
+      if(clickedCard) {
+        clickedCard.classList.add('selected');
+      }
+      // Update radio button
+      document.getElementById(`bank_option${option === 'option1' ? '1' : '2'}`).checked = true;
+    }
+  </script>
+{% endblock %}
