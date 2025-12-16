@@ -205,47 +205,6 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
         <!-- Firm Type Selection -->
-      if(n===""||n===null||n===undefined) return "";
-      const num=Number(String(n).replace(/,/g,""));
-      if(isNaN(num)) return "";
-      const s=num.toFixed(2);
-      const [whole, frac]=s.split(".");
-      const last3=whole.slice(-3), head=whole.slice(0,-3);
-      const headFmt=head.replace(/\B(?=(\d{2})+(?!\d))/g,",");
-      return (head?headFmt+",":"")+last3+"."+frac;
-    }
-    function parseINR(s){ return Number(String(s||"").replace(/,/g,""))||0; }
-    function validDDMMYYYY(s){ return /^(\d{2})\/(\d{2})\/(\d{4})$/.test(s); }
-
-    function calcTotal(){
-      let sum=0;
-      document.querySelectorAll('input.money').forEach(inp=> sum+=parseINR(inp.value));
-      const el=document.getElementById('formTotal');
-      if(el) el.textContent=formatINR(sum);
-    }
-
-    function addRow(){
-      const tbody=document.getElementById('itemsBody');
-      const idx=tbody.querySelectorAll('tr.item-row').length;
-      const tr=document.createElement('tr'); tr.className='item-row';
-      tr.innerHTML=`
-        <td>
-          <input type="text" name="items-${idx}-description" placeholder="Nature of Engagement" required>
-          <div class="hint">e.g., Appearance / Drafting / Opinion</div>
-        </td>
-        <td class="right" style="width:200px">
-          <input type="text" class="money" inputmode="decimal" value="0.00"
-                 oninput="this.value=this.value.replace(/[^0-9.,]/g,''); calcTotal();"
-                 onblur="this.value=formatINR(this.value)" required>
-          <input type="hidden" name="items-${idx}-qty" value="1">
-          <input type="hidden" name="items-${idx}-rate" class="rate-hidden">
-        </td>
-        <td style="width:110px">
-          <button type="button" class="btn" style="background:#e5e7eb;color:#111827"
-                  onclick="this.closest('tr').remove(); calcTotal();">Remove</button>
-        </td>`;
-      tbody.appendChild(tr);
-    }
         <div class="form-section">
           <label>Select Firm Type</label>
           <div class="radio-group">
@@ -362,6 +321,50 @@
 
 {% block extra_js %}
 <script>
+    // ---------- INR helpers ----------
+    function formatINR(n){
+      if(n===""||n===null||n===undefined) return "";
+      const num=Number(String(n).replace(/,/g,""));
+      if(isNaN(num)) return "";
+      const s=num.toFixed(2);
+      const [whole, frac]=s.split(".");
+      const last3=whole.slice(-3), head=whole.slice(0,-3);
+      const headFmt=head.replace(/\B(?=(\d{2})+(?!\d))/g,",");
+      return (head?headFmt+",":"")+last3+"."+frac;
+    }
+    function parseINR(s){ return Number(String(s||"").replace(/,/g,""))||0; }
+    function validDDMMYYYY(s){ return /^(\d{2})\/(\d{2})\/(\d{4})$/.test(s); }
+
+    function calcTotal(){
+      let sum=0;
+      document.querySelectorAll('input.money').forEach(inp=> sum+=parseINR(inp.value));
+      const el=document.getElementById('formTotal');
+      if(el) el.textContent=formatINR(sum);
+    }
+
+    function addRow(){
+      const tbody=document.getElementById('itemsBody');
+      const idx=tbody.querySelectorAll('tr.item-row').length;
+      const tr=document.createElement('tr'); tr.className='item-row';
+      tr.innerHTML=`
+        <td>
+          <input type="text" name="items-${idx}-description" placeholder="Nature of Engagement" required>
+          <div class="hint">e.g., Appearance / Drafting / Opinion</div>
+        </td>
+        <td class="right" style="width:200px">
+          <input type="text" class="money" inputmode="decimal" value="0.00"
+                 oninput="this.value=this.value.replace(/[^0-9.,]/g,''); calcTotal();"
+                 onblur="this.value=formatINR(this.value)" required>
+          <input type="hidden" name="items-${idx}-qty" value="1">
+          <input type="hidden" name="items-${idx}-rate" class="rate-hidden">
+        </td>
+        <td style="width:110px">
+          <button type="button" class="btn" style="background:#e5e7eb;color:#111827"
+                  onclick="this.closest('tr').remove(); calcTotal();">Remove</button>
+        </td>`;
+      tbody.appendChild(tr);
+    }
+
     // ---------- Date picker that always works (toggle type on the visible input) ----------
     (function(){
       var display = document.getElementById('date_display');
