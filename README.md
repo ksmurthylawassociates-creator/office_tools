@@ -278,5 +278,3 @@ For issues or questions, please [add contact information or issue tracker URL].
 
 ---
 
-Made with ❤️ for legal professionals
-
