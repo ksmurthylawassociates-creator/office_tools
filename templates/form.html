@@ -98,6 +98,113 @@
   /* Sticky submit bar */
   .actionbar{position:fixed;left:0;right:0;bottom:0;background:#ffffffd9;backdrop-filter:blur(6px);
              border-top:1px solid var(--line);padding:10px 16px;display:flex;justify-content:center;gap:12px;align-items:center}
+
+  /* Modal Styles */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  .modal-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 900px;
+    width: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+  }
+  .modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .modal-close:hover {
+    background: #e5e7eb;
+    color: var(--ink);
+  }
+  .modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8fafc;
+  }
+  .modal-preview-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .modal-preview-item {
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+  }
+  .modal-preview-item label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: block;
+    font-weight: 500;
+  }
+  .modal-preview-item input,
+  .modal-preview-item textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .modal-preview-item textarea {
+    font-family: monospace;
+    font-size: 12px;
+    resize: vertical;
+    min-height: 80px;
+  }
   .btn-primary{background:var(--primary);border:none;color:#fff;border-radius:12px;padding:12px 18px;font-size:16px;cursor:pointer}
   .btn-primary:hover{filter:brightness(0.96)}
   .msg{color:#059669;font-style:italic}
@@ -142,7 +249,7 @@
         </div>
       </div>
 
-      <!-- Preview/Edit Section -->
+      <!-- Preview/Edit Section (now hidden - using modal instead) -->
       <div id="petitioner-preview-section" style="display:none;margin-top:20px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div class="section-title">Preview (Edit before adding):</div>
@@ -189,7 +296,7 @@
         </div>
       </div>
 
-      <!-- Preview/Edit Section -->
+      <!-- Preview/Edit Section (now hidden - using modal instead) -->
       <div id="respondent-preview-section" style="display:none;margin-top:20px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div class="section-title">Preview (Edit before adding):</div>
@@ -330,6 +437,23 @@
       <span id="submit-msg" class="msg"></span>
     </div>
   </form>
+
+  <!-- Modal for Preview -->
+  <div id="preview-modal" class="modal-overlay" onclick="if(event.target === this) closePreviewModal()">
+    <div class="modal-container" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-title">Preview</div>
+        <button type="button" class="modal-close" onclick="closePreviewModal()" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-preview-content" class="modal-preview-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-icon" onclick="closePreviewModal()">Cancel</button>
+        <button type="button" class="btn-primary" id="modal-add-all-btn" onclick="modalAddAll()">Add All</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
@@ -600,59 +724,61 @@
     showRespondentPreview();
   }
 
+  let currentModalType = null; // 'petitioner' or 'respondent'
+
   function showPetitionerPreview() {
-    const previewList = document.getElementById('petitioner-preview-list');
-    previewList.innerHTML = '';
+    const modalContent = document.getElementById('modal-preview-content');
+    modalContent.innerHTML = '';
     
     parsedPetitioners.forEach((entry, index) => {
       const entryDiv = document.createElement('div');
-      entryDiv.className = 'entry';
-      entryDiv.style.marginBottom = '12px';
+      entryDiv.className = 'modal-preview-item';
       entryDiv.innerHTML = `
-        <div style="display:grid;gap:8px;padding:12px;background:#f8fafc;border-radius:8px;">
-          <div>
-            <label style="font-size:12px;color:var(--muted);">Name ${index + 1}:</label>
-            <input type="text" class="preview-name" data-index="${index}" value="${escapeHtml(entry.name)}" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;">
-          </div>
-          <div>
-            <label style="font-size:12px;color:var(--muted);">Address ${index + 1}:</label>
-            <textarea class="preview-address" data-index="${index}" rows="4" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-family:monospace;font-size:12px;resize:vertical;">${escapeHtml(entry.address.join('\n'))}</textarea>
-          </div>
-        </div>
+        <label>Name ${index + 1}:</label>
+        <input type="text" class="preview-name" data-index="${index}" value="${escapeHtml(entry.name)}">
+        <label style="margin-top:12px;">Address ${index + 1}:</label>
+        <textarea class="preview-address" data-index="${index}" rows="4">${escapeHtml(entry.address.join('\n'))}</textarea>
       `;
-      previewList.appendChild(entryDiv);
+      modalContent.appendChild(entryDiv);
     });
     
-    document.getElementById('petitioner-paste-section').style.display = 'none';
-    document.getElementById('petitioner-preview-section').style.display = 'block';
+    // Update modal title and button
+    document.getElementById('modal-title').textContent = `Preview Petitioners (${parsedPetitioners.length})`;
+    document.getElementById('modal-add-all-btn').textContent = 'Add All Petitioners';
+    currentModalType = 'petitioner';
+    
+    // Show modal
+    document.getElementById('preview-modal').classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    
     updateCounter('petitioners');
   }
 
   function showRespondentPreview() {
-    const previewList = document.getElementById('respondent-preview-list');
-    previewList.innerHTML = '';
+    const modalContent = document.getElementById('modal-preview-content');
+    modalContent.innerHTML = '';
     
     parsedRespondents.forEach((entry, index) => {
       const entryDiv = document.createElement('div');
-      entryDiv.className = 'entry';
-      entryDiv.style.marginBottom = '12px';
+      entryDiv.className = 'modal-preview-item';
       entryDiv.innerHTML = `
-        <div style="display:grid;gap:8px;padding:12px;background:#f8fafc;border-radius:8px;">
-          <div>
-            <label style="font-size:12px;color:var(--muted);">Name ${index + 1}:</label>
-            <input type="text" class="preview-name-resp" data-index="${index}" value="${escapeHtml(entry.name)}" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;">
-          </div>
-          <div>
-            <label style="font-size:12px;color:var(--muted);">Address ${index + 1}:</label>
-            <textarea class="preview-address-resp" data-index="${index}" rows="4" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-family:monospace;font-size:12px;resize:vertical;">${escapeHtml(entry.address.join('\n'))}</textarea>
-          </div>
-        </div>
+        <label>Name ${index + 1}:</label>
+        <input type="text" class="preview-name-resp" data-index="${index}" value="${escapeHtml(entry.name)}">
+        <label style="margin-top:12px;">Address ${index + 1}:</label>
+        <textarea class="preview-address-resp" data-index="${index}" rows="4">${escapeHtml(entry.address.join('\n'))}</textarea>
       `;
-      previewList.appendChild(entryDiv);
+      modalContent.appendChild(entryDiv);
     });
     
-    document.getElementById('respondent-paste-section').style.display = 'none';
-    document.getElementById('respondent-preview-section').style.display = 'block';
+    // Update modal title and button
+    document.getElementById('modal-title').textContent = `Preview Respondents (${parsedRespondents.length})`;
+    document.getElementById('modal-add-all-btn').textContent = 'Add All Respondents';
+    currentModalType = 'respondent';
+    
+    // Show modal
+    document.getElementById('preview-modal').classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    
     updateCounter('respondents');
   }
 
@@ -690,8 +816,7 @@
       }
     });
     
-    // Hide preview and paste section, show added section
-    document.getElementById('petitioner-preview-section').style.display = 'none';
+    // Hide paste section, show added section
     document.getElementById('petitioner-paste-section').style.display = 'none';
     document.getElementById('petitioner-paste').value = '';
     
@@ -734,8 +859,7 @@
       }
     });
     
-    // Hide preview and paste section, show added section
-    document.getElementById('respondent-preview-section').style.display = 'none';
+    // Hide paste section, show added section
     document.getElementById('respondent-paste-section').style.display = 'none';
     document.getElementById('respondent-paste').value = '';
     
@@ -744,16 +868,42 @@
     parsedRespondents = [];
   }
 
+  function closePreviewModal() {
+    document.getElementById('preview-modal').classList.remove('active');
+    document.body.style.overflow = ''; // Restore scrolling
+    
+    if (currentModalType === 'petitioner') {
+      parsedPetitioners = [];
+    } else if (currentModalType === 'respondent') {
+      parsedRespondents = [];
+    }
+    currentModalType = null;
+  }
+
+  function modalAddAll() {
+    if (currentModalType === 'petitioner') {
+      addAllPetitioners();
+    } else if (currentModalType === 'respondent') {
+      addAllRespondents();
+    }
+    closePreviewModal();
+  }
+
+  // Close modal on ESC key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('preview-modal').classList.contains('active')) {
+      closePreviewModal();
+    }
+  });
+
   function cancelPetitionerPreview() {
-    document.getElementById('petitioner-preview-section').style.display = 'none';
+    closePreviewModal();
     document.getElementById('petitioner-paste-section').style.display = 'block';
-    parsedPetitioners = [];
   }
 
   function cancelRespondentPreview() {
-    document.getElementById('respondent-preview-section').style.display = 'none';
+    closePreviewModal();
     document.getElementById('respondent-paste-section').style.display = 'block';
-    parsedRespondents = [];
   }
 
   function showAddedPetitioners() {
